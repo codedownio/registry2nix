@@ -21,6 +21,7 @@ import System.Exit
 import System.FilePath
 import System.Process
 import Test.Sandwich
+import Test.Sandwich.Formatters.TerminalUI
 import qualified Toml
 import UnliftIO.Exception
 
@@ -35,7 +36,8 @@ main = do
 
   allPackages <- forM (M.toList (packagesItems registryPackages)) $ \(_uuid, NameAndPath n p) ->
     case splitPath $ T.unpack p of
-      (x:_:_) -> do
+      -- Expect path to have at least one directory component
+      (_:_:_) -> do
         versions <- parseVersionsToml (workRepo </> T.unpack p </> "Versions.toml")
         return $ Package {
           packageName = n
@@ -43,6 +45,7 @@ main = do
           , packageFullPath = T.pack (workRepo </> T.unpack p)
           , packageVersions = Versions versions
           }
+      x -> throwIO $ userError [i|Confused by package path: #{x}|]
 
   let incompletePackages = L.filter (not . isCompletePackage) allPackages
 
@@ -67,10 +70,11 @@ treeifyPackages packages = DescribeNode "Root" folderLevelNodes
       where
         packagesInFolder = [package | package@(Package {packagePath}) <- packages, folder `T.isPrefixOf` packagePath]
 
-treeToSpec :: (MonadThrow m, MonadIO m, MonadUnliftIO m, MonadMask m, HasParallelSemaphore ctx) => Tree Package -> SpecFree ctx m ()
+treeToSpec :: (MonadUnliftIO m, MonadMask m, HasParallelSemaphore ctx) => Tree Package -> SpecFree ctx m ()
 treeToSpec (DescribeNode label subtree) = describe (T.unpack label) (parallel (L.foldl' (>>) (return ()) (fmap treeToSpec subtree)))
 treeToSpec (LeafNode package@(Package {packageName})) = withParallelSemaphore $ it [i|#{packageName}|] $ processPackage package
 
+processPackage :: (MonadUnliftIO m, MonadLogger m, MonadThrow m) => Package -> m ()
 processPackage (Package {packageVersions=(Versions versions), ..}) = do
   PackageInfo {..} <- Toml.decodeFileEither (Toml.genericCodec @PackageInfo) (T.unpack packageFullPath </> "Package.toml") >>= \case
     Left err -> expectationFailure [i|Failed to parse #{T.unpack packageFullPath </> "Package.toml"}: #{err}|]
@@ -80,10 +84,12 @@ processPackage (Package {packageVersions=(Versions versions), ..}) = do
 
   versions' <- (M.fromList <$>) $ forM (M.toList versions) $ \(k, version@(Version {..})) -> do
     debug [i|Fetching version #{k}|]
-    (exitCode, sout, serr) <- liftIO $ readCreateProcessWithExitCode (proc "nix-prefetch-git" [T.unpack repo, "--rev", T.unpack gitTreeSha1]) ""
+    (exitCode, sout, serr) <- liftIO $ readCreateProcessWithExitCode ((proc "nix-prefetch-git" [T.unpack repo, "--rev", T.unpack gitTreeSha1]) {
+                                                                         env = Just [("GIT_TERMINAL_PROMPT", "0")]
+                                                                         }) ""
     case exitCode of
       ExitSuccess -> case A.eitherDecode $ BL.pack sout of
-        Left err -> expectationFailure [i|Failed to decode nix-prefetch-git output. Stdout: #{sout}. Stderr: #{serr}|]
+        Left err -> expectationFailure [i|Failed to decode nix-prefetch-git output: #{err}. Stdout: #{sout}. Stderr: #{serr}|]
         Right (NixPrefetchGit {..}) -> return (k, version { nixSha256 = Just sha256 })
       ExitFailure n -> expectationFailure [i|Failed to nix-prefetch-git #{repo} --rev #{gitTreeSha1} (exited with #{n}). Stdout: #{sout}. Stderr: #{serr}|]
 
@@ -98,11 +104,12 @@ isCompletePackage (Package {packageVersions=(Versions versions)}) = Prelude.all 
 testOptions :: Options
 testOptions = defaultOptions {
   optionsTestArtifactsDirectory = TestArtifactsGeneratedDirectory "test_runs" (show <$> getCurrentTime)
+  , optionsFormatters = [SomeFormatter $ defaultTerminalUIFormatter {
+      terminalUIInitialFolding = InitialFoldingAllClosed
+      }]
   }
 
-withParallelSemaphore :: forall context m. (
-  MonadUnliftIO m, MonadIO m, MonadMask m, HasParallelSemaphore context
-  ) => SpecFree context m () -> SpecFree context m ()
+withParallelSemaphore :: forall context m. (MonadUnliftIO m, HasParallelSemaphore context) => SpecFree context m () -> SpecFree context m ()
 withParallelSemaphore = around' (defaultNodeOptions { nodeOptionsRecordTime = False
                                                     , nodeOptionsVisibilityThreshold = 125
                                                     , nodeOptionsCreateFolder = False }) "claim semaphore" $ \action -> do

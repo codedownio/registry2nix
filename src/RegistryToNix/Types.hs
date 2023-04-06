@@ -11,7 +11,6 @@ import Data.String.Interpolate
 import Data.Text
 import GHC.Generics
 import Toml
-import Toml.Codec
 
 import Data.Text.IO as T
 import Control.Exception
@@ -79,12 +78,14 @@ instance HasCodec Version where
 -- so made this hacky version
 parseVersionsToml :: FilePath -> IO (Map Text Version)
 parseVersionsToml path = (Toml.parse <$> T.readFile path) >>= \case
-  Left err -> throwIO $ userError [i|Failed to parse version file|]
+  Left err -> throwIO $ userError [i|Failed to parse version file: #{err}|]
   Right (Toml.TOML {tomlTables}) -> do
-    (fmap M.fromList) <$> forM (HM.toList tomlTables) $ \pair@(piece@(Piece t), Leaf k toml) -> do
-      case runTomlCodec (hasCodec @Version (Key (piece :| []))) toml of
-        Success (version :: Version) -> return (t, version)
-        Failure e -> throwIO $ userError [i|Failed to parse version file piece: #{pair}|]
+    (fmap M.fromList) <$> forM (HM.toList tomlTables) $ \case
+      x@(piece@(Piece t), Leaf _ toml) ->
+        case runTomlCodec (hasCodec @Version (Key (piece :| []))) toml of
+          Success (version :: Version) -> return (t, version)
+          Failure e -> throwIO $ userError [i|Failed to parse version file piece: #{x}: #{e}|]
+      x -> throwIO $ userError [i|Unexpected value found in version file: #{x}|]
 
 writeVersionsToml :: FilePath -> Versions -> IO ()
 writeVersionsToml path (Versions versions) = T.writeFile path (Toml.pretty toml)
