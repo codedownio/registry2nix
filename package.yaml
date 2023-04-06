@@ -35,6 +35,8 @@ dependencies:
 - time
 - tomland
 - unordered-containers
+- unliftio
+- unliftio-core
 - validation-selective
 
 default-extensions:

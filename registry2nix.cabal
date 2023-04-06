@@ -56,6 +56,8 @@ library
     , text
     , time
     , tomland
+    , unliftio
+    , unliftio-core
     , unordered-containers
     , validation-selective
   default-language: Haskell2010
@@ -92,6 +94,8 @@ executable registry2nix-exe
     , text
     , time
     , tomland
+    , unliftio
+    , unliftio-core
     , unordered-containers
     , validation-selective
   default-language: Haskell2010
@@ -129,6 +133,8 @@ test-suite registry2nix-test
     , text
     , time
     , tomland
+    , unliftio
+    , unliftio-core
     , unordered-containers
     , validation-selective
   default-language: Haskell2010

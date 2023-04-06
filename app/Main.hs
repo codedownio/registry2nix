@@ -1,10 +1,11 @@
 
 module Main (main) where
 
-import Control.Exception
+import Control.Concurrent.QSem
 import Control.Monad
-import Control.Monad.Catch
+import Control.Monad.Catch (MonadMask, MonadThrow)
 import Control.Monad.IO.Class
+import Control.Monad.IO.Unlift
 import Control.Monad.Logger
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy.Char8 as BL
@@ -21,6 +22,7 @@ import System.FilePath
 import System.Process
 import Test.Sandwich
 import qualified Toml
+import UnliftIO.Exception
 
 
 main :: IO ()
@@ -44,7 +46,8 @@ main = do
   let incompletePackages = L.filter (not . isCompletePackage) allPackages
 
   runSandwichWithCommandLineArgs' testOptions argsParser $ do
-    treeToSpec (treeifyPackages incompletePackages)
+    introduce' (defaultNodeOptions { nodeOptionsCreateFolder = False }) "Introduce parallel semaphore" parallelSemaphore (liftIO $ newQSem numWorkers) (const $ return ()) $
+      treeToSpec (treeifyPackages incompletePackages)
 
 data Tree a =
   DescribeNode Text [Tree a]
@@ -61,9 +64,9 @@ treeifyPackages packages = DescribeNode "Root" folderLevelNodes
       where
         packagesInFolder = [package | package@(Package {packagePath}) <- packages, folder `T.isPrefixOf` packagePath]
 
-treeToSpec :: (MonadThrow m, MonadIO m) => Tree Package -> SpecFree context m ()
+treeToSpec :: (MonadThrow m, MonadIO m, MonadUnliftIO m, MonadMask m, HasParallelSemaphore ctx) => Tree Package -> SpecFree ctx m ()
 treeToSpec (DescribeNode label subtree) = describe (T.unpack label) (L.foldl' (>>) (return ()) (fmap treeToSpec subtree))
-treeToSpec (LeafNode package@(Package {packageName})) = it [i|#{packageName}|] $ processPackage package
+treeToSpec (LeafNode package@(Package {packageName})) = withParallelSemaphore $ it [i|#{packageName}|] $ processPackage package
 
 processPackage (Package {packageVersions=(Versions versions), ..}) = do
   PackageInfo {..} <- Toml.decodeFileEither (Toml.genericCodec @PackageInfo) (T.unpack packagePath </> "Package.toml") >>= \case
@@ -93,6 +96,15 @@ testOptions :: Options
 testOptions = defaultOptions {
   optionsTestArtifactsDirectory = TestArtifactsGeneratedDirectory "test_runs" (show <$> getCurrentTime)
   }
+
+withParallelSemaphore :: forall context m. (
+  MonadUnliftIO m, MonadIO m, MonadMask m, HasParallelSemaphore context
+  ) => SpecFree context m () -> SpecFree context m ()
+withParallelSemaphore = around' (defaultNodeOptions { nodeOptionsRecordTime = False
+                                                    , nodeOptionsVisibilityThreshold = 125
+                                                    , nodeOptionsCreateFolder = False }) "claim semaphore" $ \action -> do
+  s <- getContext parallelSemaphore
+  bracket_ (liftIO $ waitQSem s) (liftIO $ signalQSem s) (void action)
 
 test :: IO ()
 test = runStderrLoggingT $ do
