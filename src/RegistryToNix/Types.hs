@@ -3,6 +3,7 @@
 module RegistryToNix.Types where
 
 import Control.Monad
+import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
 import Data.List.NonEmpty
 import Data.Map as M
@@ -69,7 +70,7 @@ instance HasCodec Version where
       dashifyOptions = TomlOptions {
         tomlOptionsFieldModifier = \_ -> \case
             "gitTreeSha1" -> "git-tree-sha1"
-            "nixSha256" -> "nix-sha-256"
+            "nixSha256" -> "nix-sha256"
             x -> error [i|Couldn't dashify: #{x}|]
         }
 
@@ -85,6 +86,16 @@ parseVersionsToml path = (Toml.parse <$> T.readFile path) >>= \case
         Success (version :: Version) -> return (t, version)
         Failure e -> throwIO $ userError [i|Failed to parse version file piece: #{pair}|]
 
+writeVersionsToml :: FilePath -> Versions -> IO ()
+writeVersionsToml path (Versions versions) = T.writeFile path (Toml.pretty toml)
+  where
+    toml = TOML mempty tables mempty
+    tables = HM.fromList $ fmap toPiecePair (M.toList versions)
+
+    toPiecePair :: (Text, Version) -> (Piece, (PrefixTree TOML))
+    toPiecePair (k, version) = (Piece k, Leaf key (execTomlCodec (hasCodec @Version key) version))
+      where key = Key ((Piece k) :| [])
+
 -- * Package
 
 data Package = Package {
@@ -92,3 +103,18 @@ data Package = Package {
   , packagePath :: Text
   , packageVersions :: Versions
   } deriving (Show)
+
+-- * Repo
+
+data PackageInfo = PackageInfo {
+  repo :: Text
+  } deriving (Show, Generic)
+instance HasCodec PackageInfo where
+  hasCodec = Toml.table genericCodec
+
+-- * NixPrefetchGit
+
+data NixPrefetchGit = NixPrefetchGit {
+  sha256 :: Text
+  } deriving (Generic)
+instance A.FromJSON NixPrefetchGit

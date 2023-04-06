@@ -20,10 +20,15 @@ extra-source-files:
 description:         Please see the README on GitHub at <https://github.com/githubuser/registry2nix#readme>
 
 dependencies:
+- aeson
 - base >= 4.7 && < 5
+- bytestring
 - containers
+- exceptions
 - filepath
+- monad-logger
 - optparse-applicative
+- process
 - sandwich
 - string-interpolate
 - text
@@ -52,6 +57,7 @@ ghc-options:
 - -Wmissing-home-modules
 - -Wpartial-fields
 - -Wredundant-constraints
+- -O2
 
 library:
   source-dirs: src
