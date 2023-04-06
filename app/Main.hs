@@ -39,11 +39,14 @@ main = do
         versions <- parseVersionsToml (workRepo </> T.unpack p </> "Versions.toml")
         return $ Package {
           packageName = n
-          , packagePath = T.pack (workRepo </> T.unpack p)
+          , packagePath = p
+          , packageFullPath = T.pack (workRepo </> T.unpack p)
           , packageVersions = Versions versions
           }
 
   let incompletePackages = L.filter (not . isCompletePackage) allPackages
+
+  putStrLn [i|Found #{L.length incompletePackages} packages to process out of #{L.length allPackages} total|]
 
   runSandwichWithCommandLineArgs' testOptions argsParser $ do
     introduce' (defaultNodeOptions { nodeOptionsCreateFolder = False }) "Introduce parallel semaphore" parallelSemaphore (liftIO $ newQSem numWorkers) (const $ return ()) $
@@ -65,12 +68,12 @@ treeifyPackages packages = DescribeNode "Root" folderLevelNodes
         packagesInFolder = [package | package@(Package {packagePath}) <- packages, folder `T.isPrefixOf` packagePath]
 
 treeToSpec :: (MonadThrow m, MonadIO m, MonadUnliftIO m, MonadMask m, HasParallelSemaphore ctx) => Tree Package -> SpecFree ctx m ()
-treeToSpec (DescribeNode label subtree) = describe (T.unpack label) (L.foldl' (>>) (return ()) (fmap treeToSpec subtree))
+treeToSpec (DescribeNode label subtree) = describe (T.unpack label) (parallel (L.foldl' (>>) (return ()) (fmap treeToSpec subtree)))
 treeToSpec (LeafNode package@(Package {packageName})) = withParallelSemaphore $ it [i|#{packageName}|] $ processPackage package
 
 processPackage (Package {packageVersions=(Versions versions), ..}) = do
-  PackageInfo {..} <- Toml.decodeFileEither (Toml.genericCodec @PackageInfo) (T.unpack packagePath </> "Package.toml") >>= \case
-    Left err -> expectationFailure [i|Failed to parse #{T.unpack packagePath </> "Package.toml"}: #{err}|]
+  PackageInfo {..} <- Toml.decodeFileEither (Toml.genericCodec @PackageInfo) (T.unpack packageFullPath </> "Package.toml") >>= \case
+    Left err -> expectationFailure [i|Failed to parse #{T.unpack packageFullPath </> "Package.toml"}: #{err}|]
     Right x -> return x
 
   debug [i|Processing #{packageName} (#{repo})|]
@@ -84,7 +87,7 @@ processPackage (Package {packageVersions=(Versions versions), ..}) = do
         Right (NixPrefetchGit {..}) -> return (k, version { nixSha256 = Just sha256 })
       ExitFailure n -> expectationFailure [i|Failed to nix-prefetch-git #{repo} --rev #{gitTreeSha1} (exited with #{n}). Stdout: #{sout}. Stderr: #{serr}|]
 
-  liftIO $ writeVersionsToml (T.unpack packagePath </> "Versions.toml") (Versions versions')
+  liftIO $ writeVersionsToml (T.unpack packageFullPath </> "Versions.toml") (Versions versions')
 
 isCompletePackage :: Package -> Bool
 isCompletePackage (Package {packageVersions=(Versions versions)}) = Prelude.all (hasNixSha256 . snd) (M.toList versions)
@@ -106,7 +109,7 @@ withParallelSemaphore = around' (defaultNodeOptions { nodeOptionsRecordTime = Fa
   s <- getContext parallelSemaphore
   bracket_ (liftIO $ waitQSem s) (liftIO $ signalQSem s) (void action)
 
-test :: IO ()
-test = runStderrLoggingT $ do
-  let package = Package {packageName = "REPLTreeViews", packagePath = "/home/tom/tools/General/R/REPLTreeViews", packageVersions = Versions {versions = fromList [("\"0.1.0\"",Version {gitTreeSha1 = "4b4995d67c3bac2c790a56928dcb0b8c014d8c66", nixSha256 = Nothing})]}}
-  processPackage package
+-- test :: IO ()
+-- test = runStderrLoggingT $ do
+--   let package = Package {packageName = "REPLTreeViews", packagePath = "/home/tom/tools/General/R/REPLTreeViews", packageVersions = Versions {versions = fromList [("\"0.1.0\"",Version {gitTreeSha1 = "4b4995d67c3bac2c790a56928dcb0b8c014d8c66", nixSha256 = Nothing})]}}
+--   processPackage package

@@ -101,6 +101,7 @@ writeVersionsToml path (Versions versions) = T.writeFile path (Toml.pretty toml)
 data Package = Package {
   packageName :: Text
   , packagePath :: Text
+  , packageFullPath :: Text
   , packageVersions :: Versions
   } deriving (Show)
 
