@@ -1,7 +1,7 @@
 { mkDerivation, aeson, base, bytestring, containers, exceptions
 , filepath, lib, monad-logger, optparse-applicative, process
-, sandwich, string-interpolate, text, time, tomland
-, unordered-containers, validation-selective
+, sandwich, string-interpolate, text, time, tomland, unliftio
+, unliftio-core, unordered-containers, validation-selective
 }:
 mkDerivation {
   pname = "registry2nix";
@@ -12,17 +12,20 @@ mkDerivation {
   libraryHaskellDepends = [
     aeson base bytestring containers exceptions filepath monad-logger
     optparse-applicative process sandwich string-interpolate text time
-    tomland unordered-containers validation-selective
+    tomland unliftio unliftio-core unordered-containers
+    validation-selective
   ];
   executableHaskellDepends = [
     aeson base bytestring containers exceptions filepath monad-logger
     optparse-applicative process sandwich string-interpolate text time
-    tomland unordered-containers validation-selective
+    tomland unliftio unliftio-core unordered-containers
+    validation-selective
   ];
   testHaskellDepends = [
     aeson base bytestring containers exceptions filepath monad-logger
     optparse-applicative process sandwich string-interpolate text time
-    tomland unordered-containers validation-selective
+    tomland unliftio unliftio-core unordered-containers
+    validation-selective
   ];
   homepage = "https://github.com/codedownio/registry2nix#readme";
   license = lib.licenses.bsd3;
