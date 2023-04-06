@@ -22,8 +22,21 @@ main = do
   Registry {..} <- Toml.decodeFileEither registryCodec (workRepo </> "Registry.toml") >>= \case
     Left err -> throwIO $ userError [i|Failed to parse #{workRepo </> "Registry.toml"}: #{err}|]
     Right x -> return x
-  let topLevelFolders = Set.fromList [x | (_, NameAndPath _ (splitPath . T.unpack -> (x:_:_))) <- M.toList $ packagesItems registryPackages]
-  putStrLn [i|topLevelFolders: #{topLevelFolders}|]
+
+  packages <- forM (M.toList (packagesItems registryPackages)) $ \(_uuid, NameAndPath n p) ->
+    case splitPath $ T.unpack p of
+      (x:_:_) -> do
+        versions <- parseVersionsToml (workRepo </> T.unpack p </> "Versions.toml")
+        return $ Package {
+          packageName = n
+          , packagePath = p
+          , packageVersions = Versions versions
+          }
+
+  print (Prelude.take 10 packages)
+
+  let topLevelFolders = Set.fromList [x | (_, NameAndPath _ (splitPath . T.unpack -> (x:_:_)))
+                                        <- M.toList $ packagesItems registryPackages]
 
   runSandwichWithCommandLineArgs' testOptions argsParser $ do
     forM_ topLevelFolders $ \folder -> do

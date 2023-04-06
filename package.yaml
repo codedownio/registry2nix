@@ -29,6 +29,8 @@ dependencies:
 - text
 - time
 - tomland
+- unordered-containers
+- validation-selective
 
 default-extensions:
 - GHC2021
