@@ -1,7 +1,7 @@
-{-# OPTIONS_GHC -fno-warn-missing-export-lists #-}
 
 module RegistryToNix.Types where
 
+import Control.Exception
 import Control.Monad
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
@@ -9,11 +9,9 @@ import Data.List.NonEmpty
 import Data.Map as M
 import Data.String.Interpolate
 import Data.Text
+import Data.Text.IO as T
 import GHC.Generics
 import Toml
-
-import Data.Text.IO as T
-import Control.Exception
 import Validation
 
 -- * Registry
