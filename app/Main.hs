@@ -8,12 +8,14 @@ import qualified Data.List as L
 import Data.Map as M
 import Data.String.Interpolate
 import Data.Text as T
+import qualified Data.Text.IO as T
 import Data.Time
 import RegistryToNix.Args
 import RegistryToNix.Tree
 import RegistryToNix.Types
 import RegistryToNix.Util
 import System.FilePath
+import System.IO (hFlush)
 import Test.Sandwich
 import Test.Sandwich.Formatters.TerminalUI
 import qualified Toml
@@ -28,7 +30,7 @@ main = do
     Left err -> throwIO $ userError [i|Failed to parse #{workRepo </> "Registry.toml"}: #{err}|]
     Right x -> return x
 
-  allPackages <- forM (M.toList (packagesItems registryPackages)) $ \(_uuid, NameAndPath n p) ->
+  allPackages <- forM (M.toList (packagesItems registryPackages)) $ \(uuid, NameAndPath n p) ->
     case splitPath $ T.unpack p of
       -- Expect path to have at least one directory component
       (_:_:_) -> do
@@ -38,6 +40,7 @@ main = do
           , packagePath = p
           , packageFullPath = T.pack (workRepo </> T.unpack p)
           , packageVersions = Versions versions
+          , packageUuid = uuid
           }
       x -> throwIO $ userError [i|Confused by package path: #{x}|]
 
@@ -45,9 +48,18 @@ main = do
 
   putStrLn [i|Found #{L.length incompletePackages} packages to process out of #{L.length allPackages} total|]
 
-  runSandwichWithCommandLineArgs' testOptions argsParser $ do
-    introduce' (defaultNodeOptions { nodeOptionsCreateFolder = False }) "Introduce parallel semaphore" parallelSemaphore (liftIO $ newQSem numWorkers) (const $ return ()) $
-      treeToSpec (treeifyPackages incompletePackages)
+  withMaybeFailureFile writeFailures $ \maybeHandle -> do
+    let onFailure (Package {..}) = case maybeHandle of
+          Nothing -> return ()
+          Just h -> do
+            T.hPutStrLn h ("- " <> packageUuid)
+            hFlush h
+
+    runSandwichWithCommandLineArgs' testOptions argsParser $ do
+      introduce "Failure function" failureFn (pure onFailure) (const $ return ()) $
+        introduce' (defaultNodeOptions { nodeOptionsCreateFolder = False }) "Introduce parallel semaphore" parallelSemaphore (liftIO $ newQSem numWorkers) (const $ return ()) $
+          treeToSpec (treeifyPackages incompletePackages)
+
 
 testOptions :: Options
 testOptions = defaultOptions {

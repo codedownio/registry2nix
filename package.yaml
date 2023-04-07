@@ -27,6 +27,7 @@ dependencies:
 - exceptions
 - filepath
 - monad-logger
+- mtl
 - optparse-applicative
 - process
 - sandwich

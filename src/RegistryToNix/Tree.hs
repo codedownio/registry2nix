@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 
 module RegistryToNix.Tree where
 
@@ -29,6 +30,6 @@ treeifyPackages packages = DescribeNode "Root" folderLevelNodes
       where
         packagesInFolder = [package | package@(Package {packagePath}) <- packages, folder `T.isPrefixOf` packagePath]
 
-treeToSpec :: (MonadUnliftIO m, MonadMask m, HasParallelSemaphore ctx) => Tree Package -> SpecFree ctx m ()
+treeToSpec :: (MonadUnliftIO m, MonadMask m, HasParallelSemaphore ctx, HasLabel ctx "failureFn" (Package -> IO ())) => Tree Package -> SpecFree ctx m ()
 treeToSpec (DescribeNode label subtree) = describe (T.unpack label) (parallel (L.foldl' (>>) (return ()) (fmap treeToSpec subtree)))
 treeToSpec (LeafNode package@(Package {packageName})) = withParallelSemaphore $ it [i|#{packageName}|] $ processPackage package

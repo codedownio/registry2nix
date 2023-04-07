@@ -52,6 +52,7 @@ library
     , exceptions
     , filepath
     , monad-logger
+    , mtl
     , optparse-applicative
     , process
     , sandwich
@@ -89,6 +90,7 @@ executable registry2nix-exe
     , exceptions
     , filepath
     , monad-logger
+    , mtl
     , optparse-applicative
     , process
     , registry2nix
@@ -128,6 +130,7 @@ test-suite registry2nix-test
     , exceptions
     , filepath
     , monad-logger
+    , mtl
     , optparse-applicative
     , process
     , registry2nix

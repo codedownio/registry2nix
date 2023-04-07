@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 
 module RegistryToNix.Types where
 
@@ -11,6 +12,7 @@ import Data.String.Interpolate
 import Data.Text
 import Data.Text.IO as T
 import GHC.Generics
+import Test.Sandwich (Label(..))
 import Toml
 import Validation
 
@@ -102,6 +104,7 @@ data Package = Package {
   , packagePath :: Text
   , packageFullPath :: Text
   , packageVersions :: Versions
+  , packageUuid :: Text
   } deriving (Show)
 
 -- * Repo
@@ -118,3 +121,8 @@ data NixPrefetchGit = NixPrefetchGit {
   sha256 :: Text
   } deriving (Generic)
 instance A.FromJSON NixPrefetchGit
+
+-- * Contexts
+
+failureFn :: Label "failureFn" (Package -> IO ())
+failureFn = Label :: Label "failureFn" (Package -> IO ())

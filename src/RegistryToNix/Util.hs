@@ -9,6 +9,7 @@ import Data.Map as M
 import RegistryToNix.Types
 import Test.Sandwich
 import UnliftIO.Exception
+import UnliftIO.IO
 
 
 isCompletePackage :: Package -> Bool
@@ -28,3 +29,7 @@ withParallelSemaphore = around' (defaultNodeOptions { nodeOptionsRecordTime = Fa
 -- test = runStderrLoggingT $ do
 --   let package = Package {packageName = "REPLTreeViews", packagePath = "/home/tom/tools/General/R/REPLTreeViews", packageVersions = Versions {versions = fromList [("\"0.1.0\"",Version {gitTreeSha1 = "4b4995d67c3bac2c790a56928dcb0b8c014d8c66", nixSha256 = Nothing})]}}
 --   processPackage package
+
+withMaybeFailureFile :: (MonadUnliftIO m) => Maybe FilePath -> (Maybe Handle -> m a) -> m a
+withMaybeFailureFile Nothing cb = cb Nothing
+withMaybeFailureFile (Just path) cb = withFile path AppendMode (cb . Just)
