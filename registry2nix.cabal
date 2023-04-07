@@ -64,6 +64,7 @@ library
     , unliftio-core
     , unordered-containers
     , validation-selective
+    , yaml
   default-language: Haskell2010
 
 executable registry2nix-exe
@@ -103,6 +104,7 @@ executable registry2nix-exe
     , unliftio-core
     , unordered-containers
     , validation-selective
+    , yaml
   default-language: Haskell2010
 
 test-suite registry2nix-test
@@ -143,4 +145,5 @@ test-suite registry2nix-test
     , unliftio-core
     , unordered-containers
     , validation-selective
+    , yaml
   default-language: Haskell2010

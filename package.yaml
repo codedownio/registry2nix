@@ -39,6 +39,7 @@ dependencies:
 - unliftio
 - unliftio-core
 - validation-selective
+- yaml
 
 default-extensions:
 - GHC2021

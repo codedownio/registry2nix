@@ -6,6 +6,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.IO.Unlift
 import Data.Map as M
+import qualified Data.Set as Set
 import RegistryToNix.Types
 import Test.Sandwich
 import UnliftIO.Exception
@@ -17,6 +18,9 @@ isCompletePackage (Package {packageVersions=(Versions versions)}) = Prelude.all 
   where
     hasNixSha256 (Version {nixSha256=(Just _)}) = True
     hasNixSha256 _ = False
+
+isIgnoredPackage :: Set.Set UUID -> Package -> Bool
+isIgnoredPackage ignoredUuids (Package {packageUuid}) = packageUuid `Set.member` ignoredUuids
 
 withParallelSemaphore :: forall context m. (MonadUnliftIO m, HasParallelSemaphore context) => SpecFree context m () -> SpecFree context m ()
 withParallelSemaphore = around' (defaultNodeOptions { nodeOptionsRecordTime = False

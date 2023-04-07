@@ -99,12 +99,14 @@ writeVersionsToml path (Versions versions) = T.writeFile path (Toml.pretty toml)
 
 -- * Package
 
+type UUID = Text
+
 data Package = Package {
   packageName :: Text
   , packagePath :: Text
   , packageFullPath :: Text
   , packageVersions :: Versions
-  , packageUuid :: Text
+  , packageUuid :: UUID
   } deriving (Show)
 
 -- * Repo
