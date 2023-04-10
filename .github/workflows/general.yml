@@ -35,10 +35,12 @@ jobs:
 
     - name: Check out latest JuliaRegistries/General repo
       uses: actions/checkout@v3
-      repository: "JuliaRegistries/General"
-      path: JuliaRegistriesGeneral
+      with:
+        repository: "JuliaRegistries/General"
+        path: JuliaRegistriesGeneral
 
     - name: Check out latest CodeDownIO/General repo
       uses: actions/checkout@v3
-      repository: "JuliaRegistries/General"
-      path: CodeDownIOGeneral
+      with:
+        repository: "JuliaRegistries/General"
+        path: CodeDownIOGeneral
