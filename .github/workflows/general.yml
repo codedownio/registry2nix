@@ -12,7 +12,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - uses: haskell/actions/setup@v1
+    - uses: haskell/actions/setup@v2
       with:
         ghc-version: "9.2.7"
         stack-version: "latest"
@@ -44,3 +44,12 @@ jobs:
       with:
         repository: "JuliaRegistries/General"
         path: CodeDownIOGeneral
+
+    - name: Check everything looks good
+      run: |
+        echo "---------------"
+        ls -lh
+        echo "---------------"
+        ls -lh JuliaRegistriesGeneral
+        echo "---------------"
+        ls -lh CodeDownIOGeneral
