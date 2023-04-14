@@ -53,3 +53,17 @@ jobs:
         ls -lh JuliaRegistriesGeneral
         echo "---------------"
         ls -lh CodeDownIOGeneral
+
+    - name: Generate the update
+      run: |
+        stack run -- \
+          --repo JuliaRegistriesGeneral \
+          --initial-repo CodeDownIOGeneral \
+          --ignore-previous-failures CodeDownIOGeneral/failures.yml \
+          --write-new-failures JuliaRegistriesGeneral/failures.yml
+
+    - name: See what changed in JuliaRegistriesGeneral/failures
+      run: |
+        cd JuliaRegistriesGeneral
+        git status
+        git diff
