@@ -66,7 +66,7 @@ jobs:
           --write-new-failures JuliaRegistriesGeneral/failures.yml \
           --num-workers 15
 
-    - name: Sync the changes
+    - name: Make a new commit with the changes
       run: |
         pushd JuliaRegistriesGeneral
         JULIA_REGISTRIES_COMMIT=$(git rev-parse HEAD)
@@ -88,3 +88,8 @@ jobs:
         git status
         echo "------------------"
         git diff HEAD~1 HEAD --shortstat
+
+    - name: Push the changes
+      run: |
+        cd JuliaRegistriesGeneral/
+        git push origin master
