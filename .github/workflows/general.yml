@@ -89,6 +89,9 @@ jobs:
         echo "------------------"
         git diff HEAD~1 HEAD --shortstat
 
+        # TODO: remove this
+        echo "GOT SECRET: ${{ secrets.CODEDOWN_GENERAL_PAT }}"
+
     - name: Push the changes
       uses: ad-m/github-push-action@master
       with:
