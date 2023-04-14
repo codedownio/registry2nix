@@ -22,16 +22,15 @@ jobs:
       uses: actions/cache@v2
       with:
         path: ~/.stack
-        key: ${{ runner.os }}-9.2.7-stack
-
-    # - name: apt
-    #   run: |
-    #     sudo apt-get update
-    #     sudo apt-get install -y libx11-dev libxext-dev libxinerama-dev libxrandr-dev libxss-dev
+        key: ${{ runner.os }}-9.2.7-stack-2
 
     - name: Build
       run: |
-        stack build --system-ghc --test --bench --no-run-tests --no-run-benchmarks
+        stack build --system-ghc
+
+    - name: Install
+      run: |
+        stack install --system-ghc
 
     - name: Check out latest JuliaRegistries/General repo
       uses: actions/checkout@v3
@@ -44,15 +43,6 @@ jobs:
       with:
         repository: "CodeDownIO/General"
         path: CodeDownIOGeneral
-
-    - name: Check everything looks good
-      run: |
-        echo "---------------"
-        ls -lh
-        echo "---------------"
-        ls -lh JuliaRegistriesGeneral
-        echo "---------------"
-        ls -lh CodeDownIOGeneral
 
     - name: Generate the update
       run: |
