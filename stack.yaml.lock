@@ -18,6 +18,19 @@ packages:
       size: 696
   original:
     hackage: validation-selective-0.1.0.2
+- completed:
+    name: sandwich
+    pantry-tree:
+      sha256: 2a184cda7e15f7be7c1e5adce32a280de35c67c8d4c38dd7dfd25e131a5ba1aa
+      size: 5982
+    sha256: 59363283dce88689fe5353acadd1c0108f7dba22e301a442ef58db847579ada0
+    size: 7615362
+    subdir: sandwich
+    url: https://github.com/codedownio/sandwich/archive/c8bd19da96b8ecafe99ab783be890f16af5aaff5.tar.gz
+    version: 0.1.3.2
+  original:
+    subdir: sandwich
+    url: https://github.com/codedownio/sandwich/archive/c8bd19da96b8ecafe99ab783be890f16af5aaff5.tar.gz
 snapshots:
 - completed:
     sha256: 14ca51a9a597c32dd7804c10d079feea3d0ae40c5fbbb346cbd67b3ae49f6d01
