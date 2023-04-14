@@ -63,8 +63,11 @@ jobs:
           --write-new-failures JuliaRegistriesGeneral/failures.yml \
           --num-workers 15
 
-    - name: See what changed in JuliaRegistriesGeneral/failures
+    - name: Sync the changes
       run: |
-        cd JuliaRegistriesGeneral
+        # Tricky method to ensure the commit we're about to create for CodeDownIOGeneral
+        # exactly matches the new state of JuliaRegistries
+        rm -rf JuliaRegistries/.git
+        mv CodeDownIOGeneral/.git JuliaRegistries/
+        cd JuliaRegistries/
         git status
-        git diff
