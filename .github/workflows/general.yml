@@ -68,8 +68,8 @@ jobs:
       run: |
         # Tricky method to ensure the commit we're about to create for CodeDownIOGeneral
         # exactly matches the new state of JuliaRegistries
-        rm -rf JuliaRegistries/.git
-        mv CodeDownIOGeneral/.git JuliaRegistries/
-        cd JuliaRegistries/
+        rm -rf JuliaRegistriesGeneral/.git
+        mv CodeDownIOGeneral/.git JuliaRegistriesGeneral/.git
+        cd JuliaRegistriesGeneral/
         ls -lhtra
         git status
