@@ -45,7 +45,7 @@ instance HasCodec NameAndPath where
 -- * Versions
 
 data Versions = Versions {
-  versions :: Map Text Version
+  versions :: Map VersionString Version
   } deriving (Show, Generic)
 -- instance HasCodec Versions where
 --   hasCodec = match _Versions
@@ -60,7 +60,7 @@ data Versions = Versions {
 
 data Version = Version {
   gitTreeSha1 :: Text
-  , nixSha256 :: Maybe Text
+  , nixSha256 :: Maybe NixSha256
   } deriving (Show, Generic)
 instance HasCodec Version where
   hasCodec _ = genericCodecWithOptions $ dashifyOptions
@@ -76,7 +76,7 @@ instance HasCodec Version where
 -- | Having trouble parsing Versions.toml normally due to
 -- https://github.com/kowainik/tomland/issues/404,
 -- so made this hacky version
-parseVersionsToml :: FilePath -> IO (Map Text Version)
+parseVersionsToml :: FilePath -> IO (Map VersionString Version)
 parseVersionsToml path = (Toml.parse <$> T.readFile path) >>= \case
   Left err -> throwIO $ userError [i|Failed to parse version file: #{err}|]
   Right (Toml.TOML {tomlTables}) -> do
@@ -100,6 +100,9 @@ writeVersionsToml path (Versions versions) = T.writeFile path (Toml.pretty toml)
 -- * Package
 
 type UUID = Text
+type VersionString = Text
+type NixSha256 = Text
+type TreeSha1 = Text
 
 data Package = Package {
   packageName :: Text

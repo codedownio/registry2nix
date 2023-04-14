@@ -30,6 +30,7 @@ library
       RegistryToNix.Tree
       RegistryToNix.Types
       RegistryToNix.Util
+      RegistryToNix.VersionCache
   other-modules:
       Paths_registry2nix
   hs-source-dirs:

@@ -16,6 +16,7 @@ import RegistryToNix.Args
 import RegistryToNix.Tree
 import RegistryToNix.Types
 import RegistryToNix.Util
+import RegistryToNix.VersionCache
 import System.FilePath
 import System.IO (hFlush)
 import Test.Sandwich
@@ -52,6 +53,10 @@ main = do
           }
       x -> throwIO $ userError [i|Confused by package path: #{x}|]
 
+  vc <- case initialRepo of
+    Nothing -> return $ VersionCache mempty
+    Just p -> buildVersionCache p
+
   let incompletePackages = L.filter (\x -> not (isIgnoredPackage uuidsToIgnore x || isCompletePackage x)) allPackages
 
   putStrLn [i|Found #{L.length incompletePackages} packages to process out of #{L.length allPackages} total (ignoring #{L.length uuidsToIgnore})|]
@@ -65,8 +70,9 @@ main = do
 
     runSandwichWithCommandLineArgs' testOptions argsParser $ do
       introduce "Failure function" failureFn (pure onFailure) (const $ return ()) $
-        introduce' (defaultNodeOptions { nodeOptionsCreateFolder = False }) "Introduce parallel semaphore" parallelSemaphore (liftIO $ newQSem numWorkers) (const $ return ()) $
-          treeToSpec (treeifyPackages incompletePackages)
+        introduce "VersionCache" versionCache (pure vc) (const $ return ()) $
+          introduce' (defaultNodeOptions { nodeOptionsCreateFolder = False }) "Introduce parallel semaphore" parallelSemaphore (liftIO $ newQSem numWorkers) (const $ return ()) $
+            treeToSpec (treeifyPackages incompletePackages)
 
 
 testOptions :: Options
