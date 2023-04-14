@@ -57,10 +57,12 @@ jobs:
     - name: Generate the update
       run: |
         stack run -- \
+          --print-failures \
           --repo JuliaRegistriesGeneral \
           --initial-repo CodeDownIOGeneral \
           --ignore-previous-failures CodeDownIOGeneral/failures.yml \
-          --write-new-failures JuliaRegistriesGeneral/failures.yml
+          --write-new-failures JuliaRegistriesGeneral/failures.yml \
+          --num-workers 15
 
     - name: See what changed in JuliaRegistriesGeneral/failures
       run: |
