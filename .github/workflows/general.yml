@@ -56,6 +56,8 @@ jobs:
 
     - name: Generate the update
       run: |
+        cp CodeDownIOGeneral/failures.yml JuliaRegistriesGeneral/failures.yml
+
         registry2nix-exe \
           --print-failures \
           --repo JuliaRegistriesGeneral \
@@ -66,10 +68,21 @@ jobs:
 
     - name: Sync the changes
       run: |
+        pushd JuliaRegistriesGeneral
+        JULIA_REGISTRIES_COMMIT=$(git rev-parse HEAD)
+        popd
+
         # Tricky method to ensure the commit we're about to create for CodeDownIOGeneral
         # exactly matches the new state of JuliaRegistries
         rm -rf JuliaRegistriesGeneral/.git
         mv CodeDownIOGeneral/.git JuliaRegistriesGeneral/.git
         cd JuliaRegistriesGeneral/
-        ls -lhtra
         git status
+
+        echo "------------------"
+        git add .
+        git commit -m "Automatic update to JuliaRegistries/General/JULIA_REGISTRIES_COMMIT"
+        echo "------------------"
+        git status
+        echo "------------------"
+        git diff HEAD~1 HEAD --shortstat
