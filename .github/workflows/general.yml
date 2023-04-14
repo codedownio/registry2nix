@@ -2,6 +2,7 @@ name: general
 
 on:
   workflow_dispatch:
+  push:
   # schedule:
   #   - cron:  '0 12 * * *' # Every day at noon
 
@@ -70,4 +71,5 @@ jobs:
         rm -rf JuliaRegistries/.git
         mv CodeDownIOGeneral/.git JuliaRegistries/
         cd JuliaRegistries/
+        ls -lhtra
         git status
