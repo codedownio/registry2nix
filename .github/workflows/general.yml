@@ -89,13 +89,15 @@ jobs:
         echo "------------------"
         git diff HEAD~1 HEAD --shortstat
 
-        # TODO: remove this
-        echo "GOT SECRET: ${{ secrets.CODEDOWN_GENERAL_PAT }}"
-
     - name: Push the changes
-      uses: ad-m/github-push-action@master
-      with:
-        repository: codedownio/General
-        directory: JuliaRegistriesGeneral
-        github_token: ${{ secrets.CODEDOWN_GENERAL_PAT }}
-        branch: master
+      run: |
+        cd JuliaRegistriesGeneral
+        git push https://codedownio:${{secrets.CODEDOWN_GENERAL_PAT}}@github.com/codedownio/General.git HEAD:master
+
+    # - name: Push the changes
+    #   uses: ad-m/github-push-action@master
+    #   with:
+    #     repository: codedownio/General
+    #     directory: JuliaRegistriesGeneral
+    #     github_token: ${{ secrets.CODEDOWN_GENERAL_PAT }}
+    #     branch: master
