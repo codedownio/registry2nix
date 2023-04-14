@@ -95,7 +95,7 @@ jobs:
     - name: Push the changes
       uses: ad-m/github-push-action@master
       with:
-        repository: CodeDownIO/General
+        repository: codedownio/General
         directory: JuliaRegistriesGeneral
         github_token: ${{ secrets.CODEDOWN_GENERAL_PAT }}
         branch: master
