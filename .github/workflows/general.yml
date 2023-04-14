@@ -46,7 +46,7 @@ jobs:
 
     - name: Generate the update
       run: |
-        stack run -- \
+        registry2nix-exe \
           --print-failures \
           --repo JuliaRegistriesGeneral \
           --initial-repo CodeDownIOGeneral \
