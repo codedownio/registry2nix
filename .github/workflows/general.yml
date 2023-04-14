@@ -90,6 +90,9 @@ jobs:
         git diff HEAD~1 HEAD --shortstat
 
     - name: Push the changes
-      run: |
-        cd JuliaRegistriesGeneral/
-        git push origin master
+      uses: ad-m/github-push-action@master
+      with:
+        repository: CodeDownIO/General
+        directory: JuliaRegistriesGeneral
+        github_token: ${{ secrets.CODEDOWN_GENERAL_PAT }}
+        branch: master
