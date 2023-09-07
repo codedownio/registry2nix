@@ -83,7 +83,7 @@ main = do
       introduce "Failure function" failureFn (pure onFailure) (const $ return ()) $
         introduce "VersionCache" versionCache (pure vc) (const $ return ()) $
           introduce' (defaultNodeOptions { nodeOptionsCreateFolder = False }) "Introduce parallel semaphore" parallelSemaphore (liftIO $ newQSem numWorkers) (const $ return ()) $
-            treeToSpec (treeifyPackages incompletePackages)
+            treeToSpec previousFailures (treeifyPackages incompletePackages)
 
 
 putUuidFirst :: Text -> Text -> Ordering

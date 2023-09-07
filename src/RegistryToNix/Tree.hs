@@ -5,6 +5,8 @@ module RegistryToNix.Tree where
 import Control.Monad.Catch (MonadMask)
 import Control.Monad.IO.Unlift
 import qualified Data.List as L
+import Data.Map as M
+import Data.Maybe
 import qualified Data.Set as Set
 import Data.String.Interpolate
 import Data.Text as T
@@ -34,6 +36,9 @@ treeifyPackages packages = DescribeNode "Root" folderLevelNodes
 treeToSpec :: (
   MonadUnliftIO m, MonadMask m, HasParallelSemaphore ctx
   , HasLabel ctx "failureFn" (Package -> PreviousFailureInfo -> IO ()), HasLabel ctx "versionCache" VersionCache
-  ) => Tree Package -> SpecFree ctx m ()
-treeToSpec (DescribeNode label subtree) = describe (T.unpack label) (parallel (L.foldl' (>>) (return ()) (fmap treeToSpec subtree)))
-treeToSpec (LeafNode package@(Package {packageName})) = withParallelSemaphore $ it [i|#{packageName}|] $ processPackage package
+  ) => Map UUID (Set.Set PreviousFailureInfo) -> Tree Package -> SpecFree ctx m ()
+treeToSpec previousFailures (DescribeNode label subtree) = describe (T.unpack label) $
+  parallel (L.foldl' (>>) (return ()) (fmap (treeToSpec previousFailures) subtree))
+treeToSpec previousFailures (LeafNode package@(Package {packageName, packageUuid})) = withParallelSemaphore $
+  it [i|#{packageName}|] $
+    processPackage package (fromMaybe mempty (M.lookup packageUuid previousFailures))

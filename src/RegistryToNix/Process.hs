@@ -11,11 +11,12 @@ import Control.Monad.Reader
 import qualified Data.Aeson as A
 import Data.Map as M
 import Data.Maybe
+import qualified Data.Set as Set
 import Data.String.Interpolate
 import Data.Text as T
 import qualified Data.Text.Lazy as TL
 import Data.Text.Lazy.Encoding
-import RegistryToNix.Types
+import RegistryToNix.Types hiding (info)
 import RegistryToNix.VersionCache
 import System.Exit
 import System.FilePath
@@ -28,17 +29,23 @@ import UnliftIO.Exception
 processPackage :: (
   MonadUnliftIO m, MonadLoggerIO m, MonadThrow m, MonadReader ctx m
   , HasLabel ctx "failureFn" (Package -> PreviousFailureInfo -> IO ()), HasLabel ctx "versionCache" VersionCache
-  ) => Package -> m ()
-processPackage package@(Package {packageVersions=(Versions versions), ..}) = do
+  ) => Package -> Set.Set PreviousFailureInfo -> m ()
+processPackage package@(Package {packageVersions=(Versions versions), ..}) previousPackageFailures = do
   onFailure <- getContext failureFn
   VersionCache vc <- getContext versionCache
 
-  flip withException (\(e :: SomeException) -> liftIO $ onFailure package (PreviousFailureInfoUnexpectedFailure (T.pack $ show e))) $ do
+  let handleException (e :: SomeException) = case fromException e of
+        Just (x :: PreviousFailureInfo) -> liftIO $ onFailure package x
+        Nothing -> liftIO $ onFailure package (PreviousFailureInfoUnexpectedFailure (T.pack $ show e))
+
+  flip withException handleException $ do
     PackageInfo {..} <- Toml.decodeFileEither (Toml.genericCodec @PackageInfo) (T.unpack packageFullPath </> "Package.toml") >>= \case
       Left err -> expectationFailure [i|Failed to parse #{T.unpack packageFullPath </> "Package.toml"}: #{err}|]
       Right x -> return x
 
-    debug [i|Processing #{packageName} (#{repo})|]
+    info [i|Processing #{packageName} (#{repo})|]
+
+    debug [i|Had previous package failures: #{previousPackageFailures}|]
 
     assertCanAccessRepo repo
 
