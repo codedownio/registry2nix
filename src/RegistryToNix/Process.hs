@@ -9,6 +9,7 @@ import Control.Monad.IO.Unlift
 import Control.Monad.Logger (MonadLogger, MonadLoggerIO)
 import Control.Monad.Reader
 import qualified Data.Aeson as A
+import qualified Data.List as L
 import Data.Map as M
 import Data.Maybe
 import qualified Data.Set as Set
@@ -53,7 +54,11 @@ processPackage package@(Package {packageVersions=(Versions versions), ..}) previ
       case nixSha256 of
         Just _ -> return $ Just (k, version) -- No need to re-fetch
         Nothing
-          | Just sha256 <- M.lookup (packageUuid, k, gitTreeSha1) vc -> return $ Just (k, version { nixSha256 = Just sha256 })
+          | Just _previousFailure <- findPreviousVersionFailure k previousPackageFailures -> do
+              warn [i|Skipping version due to previous failure: #{k}|]
+              return $ Just (k, version)
+          | Just sha256 <- M.lookup (packageUuid, k, gitTreeSha1) vc ->
+              return $ Just (k, version { nixSha256 = Just sha256 })
           | otherwise -> do
               handle (\(e :: PreviousFailureInfo) -> liftIO (onFailure package e) >> warn [i|Failed to fetch version: #{k}|] >> pure (Just (k, version))) $ do
                 debug [i|Fetching version #{k}|]
@@ -70,6 +75,14 @@ processPackage package@(Package {packageVersions=(Versions versions), ..}) previ
 
     liftIO $ writeVersionsToml (T.unpack packageFullPath </> "Versions.toml") (Versions versions')
 
+
+findPreviousVersionFailure :: VersionString -> Set.Set PreviousFailureInfo -> Maybe PreviousFailureInfo
+findPreviousVersionFailure versionString failures = case L.filter matches (Set.toList failures) of
+  [] -> Nothing
+  (x:_) -> Just x
+  where
+    matches (PreviousFailureInfoSpecificVersion v _reason) = v == versionString
+    matches _ = False
 
 assertCanAccessRepo :: (MonadIO m, MonadLogger m) => Text -> m ()
 assertCanAccessRepo repo = do
