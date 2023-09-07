@@ -84,8 +84,8 @@ main = do
 
 
 putUuidFirst :: Text -> Text -> Ordering
-putUuidFirst "uuid" _ = GT
-putUuidFirst _ "uuid" = LT
+putUuidFirst "uuid" _ = LT
+putUuidFirst _ "uuid" = GT
 putUuidFirst x y = x `compare` y
 
 testOptions :: Options
