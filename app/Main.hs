@@ -41,7 +41,7 @@ main = do
       Right xs -> pure xs
 
   let previousFailures = M.fromListWith Set.union [(uuid, Set.singleton failureInfo)
-                                                  | (PreviousFailure uuid failureInfo) <- Set.toList previousFailuresSet]
+                                                  | (PreviousFailure uuid _name failureInfo) <- Set.toList previousFailuresSet]
 
   allPackages <- forM (M.toList (packagesItems registryPackages)) $ \(uuid, NameAndPath n p) ->
     case splitPath $ T.unpack p of
@@ -67,16 +67,19 @@ main = do
 
   failuresVar :: MVar (Set.Set PreviousFailure) <- newMVar mempty
 
-  let onFailure (Package {..}) failureInfo = modifyMVar_ failuresVar (pure . Set.insert (PreviousFailure packageUuid failureInfo))
+  let onFailure (Package {..}) failureInfo = modifyMVar_ failuresVar (pure . Set.insert (PreviousFailure packageUuid packageName failureInfo))
 
-  let writeNewFailures = case writeFailures of
+  let writeNewFailures :: MonadIO m => ExampleT context m ()
+      writeNewFailures = case writeFailures of
         Nothing -> pure ()
         Just path -> do
           allNewFailures <- readMVar failuresVar
-          B.writeFile path (Yaml.encodePretty (Yaml.setConfCompare putUuidFirst Yaml.defConfig) (previousFailuresSet <> allNewFailures))
+          Test.Sandwich.info [i|previousFailuresSet: #{previousFailuresSet}|]
+          Test.Sandwich.info [i|allNewFailures: #{allNewFailures}|]
+          liftIO $ B.writeFile path (Yaml.encodePretty (Yaml.setConfCompare putUuidFirst Yaml.defConfig) (previousFailuresSet <> allNewFailures))
 
-  flip finally writeNewFailures $
-    runSandwichWithCommandLineArgs' testOptions argsParser $ do
+  runSandwichWithCommandLineArgs' testOptions argsParser $
+    after "Write failures to disk" writeNewFailures $
       introduce "Failure function" failureFn (pure onFailure) (const $ return ()) $
         introduce "VersionCache" versionCache (pure vc) (const $ return ()) $
           introduce' (defaultNodeOptions { nodeOptionsCreateFolder = False }) "Introduce parallel semaphore" parallelSemaphore (liftIO $ newQSem numWorkers) (const $ return ()) $
@@ -86,6 +89,13 @@ main = do
 putUuidFirst :: Text -> Text -> Ordering
 putUuidFirst "uuid" _ = LT
 putUuidFirst _ "uuid" = GT
+
+putUuidFirst "name" _ = LT
+putUuidFirst _ "name" = GT
+
+putUuidFirst "tag" _ = LT
+putUuidFirst _ "tag" = GT
+
 putUuidFirst x y = x `compare` y
 
 testOptions :: Options

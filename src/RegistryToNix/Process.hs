@@ -6,14 +6,15 @@ import Control.Monad
 import Control.Monad.Catch (MonadThrow)
 import Control.Monad.IO.Class
 import Control.Monad.IO.Unlift
-import Control.Monad.Logger (MonadLogger)
+import Control.Monad.Logger (MonadLogger, MonadLoggerIO)
 import Control.Monad.Reader
 import qualified Data.Aeson as A
-import qualified Data.ByteString.Lazy.Char8 as BL
 import Data.Map as M
 import Data.Maybe
 import Data.String.Interpolate
 import Data.Text as T
+import qualified Data.Text.Lazy as TL
+import Data.Text.Lazy.Encoding
 import RegistryToNix.Types
 import RegistryToNix.VersionCache
 import System.Exit
@@ -25,7 +26,7 @@ import UnliftIO.Exception
 
 
 processPackage :: (
-  MonadUnliftIO m, MonadLogger m, MonadThrow m, MonadReader ctx m
+  MonadUnliftIO m, MonadLoggerIO m, MonadThrow m, MonadReader ctx m
   , HasLabel ctx "failureFn" (Package -> PreviousFailureInfo -> IO ()), HasLabel ctx "versionCache" VersionCache
   ) => Package -> m ()
 processPackage package@(Package {packageVersions=(Versions versions), ..}) = do
@@ -47,16 +48,16 @@ processPackage package@(Package {packageVersions=(Versions versions), ..}) = do
         Nothing
           | Just sha256 <- M.lookup (packageUuid, k, gitTreeSha1) vc -> return $ Just (k, version { nixSha256 = Just sha256 })
           | otherwise -> do
-              handle (\(e :: PreviousFailureInfo) -> liftIO $ onFailure package e >> pure (Just (k, version))) $ do
+              handle (\(e :: PreviousFailureInfo) -> liftIO (onFailure package e) >> warn [i|Failed to fetch version: #{k}|] >> pure (Just (k, version))) $ do
                 debug [i|Fetching version #{k}|]
-                (exitCode, sout, serr) <- liftIO $ readCreateProcessWithExitCode (
+                (exitCode, T.pack -> sout, T.pack -> serr) <- liftIO $ readCreateProcessWithExitCode (
                   (proc "nix-prefetch-git" [T.unpack repo, "--rev", T.unpack gitTreeSha1]) {
                       env = Just [("GIT_TERMINAL_PROMPT", "0")]
                       }) ""
 
                 case exitCode of
-                  ExitFailure n -> throwIO $ PreviousFailureInfoSpecificVersion k [i|Failed to nix-prefetch-git #{repo} --rev #{gitTreeSha1} (exited with #{n}). Stdout: #{sout}. Stderr: #{serr}|]
-                  ExitSuccess -> case A.eitherDecode $ BL.pack sout of
+                  ExitFailure n -> throwIO $ PreviousFailureInfoSpecificVersion k [i|Failed to nix-prefetch-git #{repo} --rev #{gitTreeSha1} (exited with #{n}). Stdout: #{truncateText sout}. Stderr: #{truncateText serr}|]
+                  ExitSuccess -> case A.eitherDecode $ encodeUtf8 (TL.fromStrict sout) of
                     Left err -> throwIO $ PreviousFailureInfoSpecificVersion k [i|Failed to decode nix-prefetch-git output: #{err}. Stdout: #{sout}. Stderr: #{serr}|]
                     Right (NixPrefetchGit {..}) -> return $ Just (k, version { nixSha256 = Just sha256 })
 
@@ -70,3 +71,8 @@ assertCanAccessRepo repo = do
   when (exitCode /= ExitSuccess) $ do
     logError [i|Couldn't access repo '#{repo}'. Code: #{exitCode}. Stdout: '#{sout}'. Stderr: '#{serr}'.|]
     throwIO $ PreviousFailureInfoRepoInaccessible
+
+truncateText :: Text -> Text
+truncateText t
+  | T.length t > 200 = T.take 200 t <> "..."
+  | otherwise = t

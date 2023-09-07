@@ -1,18 +1,24 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# OPTIONS_GHC -fno-warn-partial-fields #-}
 
 module RegistryToNix.Types where
 
 import Control.Exception
 import Control.Monad
 import qualified Data.Aeson as A
+import Data.Aeson.TH
 import qualified Data.HashMap.Strict as HM
+import qualified Data.List as L
 import Data.List.NonEmpty
 import Data.Map as M
 import Data.String.Interpolate
 import Data.Text
 import Data.Text.IO as T
 import GHC.Generics
+import RegistryToNix.Aeson
 import Test.Sandwich (Label(..))
 import Toml
 import Validation
@@ -135,13 +141,25 @@ failureFn = Label :: Label "failureFn" (Package -> PreviousFailureInfo -> IO ())
 
 -- * Failures
 
-data PreviousFailure = PreviousFailure {
-  uuid :: Text
-  , info :: PreviousFailureInfo
-  } deriving (Show, Eq, Ord, Generic, A.ToJSON, A.FromJSON)
-
 data PreviousFailureInfo =
   PreviousFailureInfoRepoInaccessible
-  | PreviousFailureInfoUnexpectedFailure Text
-  | PreviousFailureInfoSpecificVersion VersionString Text
-  deriving (Show, Eq, Ord, Generic, Exception, A.ToJSON, A.FromJSON)
+  | PreviousFailureInfoUnexpectedFailure {
+      previousFailureInfoDetails :: Text
+      }
+  | PreviousFailureInfoSpecificVersion {
+      previousFailureInfoVersion :: VersionString
+      , previousFailureInfoText :: Text
+      }
+  deriving (Show, Eq, Ord, Generic, Exception)
+$(deriveJSON A.defaultOptions {
+     fieldLabelModifier = toSnake . L.drop (L.length ("PreviousFailureInfo" :: String))
+     , constructorTagModifier = toSnake . L.drop (L.length ("PreviousFailureInfo" :: String))
+     , tagSingleConstructors = True
+     } ''PreviousFailureInfo)
+
+data PreviousFailure = PreviousFailure {
+  uuid :: Text
+  , name :: Text
+  , info :: PreviousFailureInfo
+  } deriving (Show, Eq, Ord, Generic)
+$(deriveJSON A.defaultOptions ''PreviousFailure)
