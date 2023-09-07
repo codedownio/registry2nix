@@ -47,7 +47,7 @@ processPackage package@(Package {packageVersions=(Versions versions), ..}) = do
         Nothing
           | Just sha256 <- M.lookup (packageUuid, k, gitTreeSha1) vc -> return $ Just (k, version { nixSha256 = Just sha256 })
           | otherwise -> do
-              handle (\(e :: PreviousFailureInfo) -> liftIO $ onFailure package e >> pure Nothing) $ do
+              handle (\(e :: PreviousFailureInfo) -> liftIO $ onFailure package e >> pure (Just (k, version))) $ do
                 debug [i|Fetching version #{k}|]
                 (exitCode, sout, serr) <- liftIO $ readCreateProcessWithExitCode (
                   (proc "nix-prefetch-git" [T.unpack repo, "--rev", T.unpack gitTreeSha1]) {
