@@ -19,8 +19,10 @@ isCompletePackage (Package {packageVersions=(Versions versions)}) = Prelude.all 
     hasNixSha256 (Version {nixSha256=(Just _)}) = True
     hasNixSha256 _ = False
 
-isIgnoredPackage :: Set.Set UUID -> Package -> Bool
-isIgnoredPackage ignoredUuids (Package {packageUuid}) = packageUuid `Set.member` ignoredUuids
+isIgnoredPackage :: Map UUID (Set.Set PreviousFailureInfo) -> Package -> Bool
+isIgnoredPackage previousFailures (Package {packageUuid}) = case M.lookup packageUuid previousFailures of
+  Nothing -> False
+  Just failures -> PreviousFailureInfoRepoInaccessible `Set.member` failures
 
 withParallelSemaphore :: forall context m. (MonadUnliftIO m, HasParallelSemaphore context) => SpecFree context m () -> SpecFree context m ()
 withParallelSemaphore = around' (defaultNodeOptions { nodeOptionsRecordTime = False

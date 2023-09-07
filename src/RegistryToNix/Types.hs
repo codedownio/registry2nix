@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 module RegistryToNix.Types where
 
@@ -129,5 +130,18 @@ instance A.FromJSON NixPrefetchGit
 
 -- * Contexts
 
-failureFn :: Label "failureFn" (Package -> IO ())
-failureFn = Label :: Label "failureFn" (Package -> IO ())
+failureFn :: Label "failureFn" (Package -> PreviousFailureInfo -> IO ())
+failureFn = Label :: Label "failureFn" (Package -> PreviousFailureInfo -> IO ())
+
+-- * Failures
+
+data PreviousFailure = PreviousFailure {
+  uuid :: Text
+  , info :: PreviousFailureInfo
+  } deriving (Show, Eq, Ord, Generic, A.ToJSON, A.FromJSON)
+
+data PreviousFailureInfo =
+  PreviousFailureInfoRepoInaccessible
+  | PreviousFailureInfoUnexpectedFailure Text
+  | PreviousFailureInfoSpecificVersion VersionString Text
+  deriving (Show, Eq, Ord, Generic, Exception, A.ToJSON, A.FromJSON)

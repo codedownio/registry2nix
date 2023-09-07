@@ -32,7 +32,8 @@ treeifyPackages packages = DescribeNode "Root" folderLevelNodes
         packagesInFolder = [package | package@(Package {packagePath}) <- packages, folder `T.isPrefixOf` packagePath]
 
 treeToSpec :: (
-  MonadUnliftIO m, MonadMask m, HasParallelSemaphore ctx, HasLabel ctx "failureFn" (Package -> IO ()), HasLabel ctx "versionCache" VersionCache
+  MonadUnliftIO m, MonadMask m, HasParallelSemaphore ctx
+  , HasLabel ctx "failureFn" (Package -> PreviousFailureInfo -> IO ()), HasLabel ctx "versionCache" VersionCache
   ) => Tree Package -> SpecFree ctx m ()
 treeToSpec (DescribeNode label subtree) = describe (T.unpack label) (parallel (L.foldl' (>>) (return ()) (fmap treeToSpec subtree)))
 treeToSpec (LeafNode package@(Package {packageName})) = withParallelSemaphore $ it [i|#{packageName}|] $ processPackage package
