@@ -96,5 +96,5 @@ assertCanAccessRepo repo = do
 
 truncateText :: Text -> Text
 truncateText t
-  | T.length t > 200 = T.take 200 t <> "..."
+  | T.length t > 500 = T.take 500 t <> "..."
   | otherwise = t
