@@ -23,6 +23,7 @@ import Test.Sandwich
 import Test.Sandwich.Formatters.TerminalUI
 import qualified Toml
 import UnliftIO.Concurrent
+import UnliftIO.Directory
 import UnliftIO.Exception
 
 
@@ -37,7 +38,11 @@ main = do
   previousFailuresSet :: Set.Set PreviousFailure <- case ignoreFailures of
     Nothing -> return mempty
     Just path -> Yaml.decodeFileEither path >>= \case
-      Left err -> throwIO $ userError [i|Failed decode previous failures in #{path}: #{err}|]
+      Left err -> doesPathExist path >>= \case
+        True -> getFileSize path >>= \case
+          0 -> return mempty
+          n -> throwIO $ userError [i|Failed decode previous failures in #{path} (file was #{n} bytes): #{err}|]
+        False -> return mempty
       Right xs -> pure xs
 
   let previousFailures = M.fromListWith Set.union [(uuid, Set.singleton failureInfo)
