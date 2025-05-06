@@ -24,6 +24,7 @@ import System.FilePath
 import System.Process
 import Test.Sandwich
 import qualified Toml
+import UnliftIO.Environment
 import UnliftIO.Exception
 
 
@@ -62,9 +63,10 @@ processPackage package@(Package {packageVersions=(Versions versions), ..}) previ
           | otherwise -> do
               handle (\(e :: PreviousFailureInfo) -> liftIO (onFailure package e) >> warn [i|Failed to fetch version: #{k}|] >> pure (Just (k, version))) $ do
                 debug [i|Fetching version #{k}|]
+                baseEnv <- getEnvironment
                 (exitCode, T.pack -> sout, T.pack -> serr) <- liftIO $ readCreateProcessWithExitCode (
                   (proc "nix-prefetch-git" [T.unpack repo, "--rev", T.unpack gitTreeSha1]) {
-                      env = Just [("GIT_TERMINAL_PROMPT", "0")]
+                      env = Just (("GIT_TERMINAL_PROMPT", "0") : baseEnv)
                       }) ""
 
                 case exitCode of
