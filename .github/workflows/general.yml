@@ -11,9 +11,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-    - uses: cachix/install-nix-action@v26
+    - uses: cachix/install-nix-action@v31
       with:
         nix_path: nixpkgs=channel:release-22.11
         github_access_token: ${{ secrets.GITHUB_TOKEN }}
@@ -22,14 +22,14 @@ jobs:
       run: |
         nix profile install nixpkgs#nix-prefetch-git
 
-    - uses: haskell/actions/setup@v2
+    - uses: haskell-actions/setup@v2
       with:
         ghc-version: "9.2.7"
         stack-version: "latest"
         enable-stack: true
 
     - name: Cache ~/.stack
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: ~/.stack
         key: ${{ runner.os }}-9.2.7-stack-2
